@@ -26,7 +26,5 @@
     "resend": "^6.9.3",
     "tailwindcss": "^4.2.1"
   },
-  "devDependencies": {
-    "supabase": "^2.76.15"
-  }
+  "devDependencies": {}
 }
