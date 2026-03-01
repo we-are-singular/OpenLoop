@@ -15,6 +15,11 @@ export default defineConfig({
     enabled: false
   },
   vite: {
-    plugins: [tailwindcss()]
+    plugins: [tailwindcss()],
+    resolve: {
+      alias: {
+        'react-dom/server': 'react-dom/server.edge'
+      }
+    }
   }
 });
