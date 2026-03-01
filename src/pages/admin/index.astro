@@ -1,0 +1,236 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Dashboard | OpenLoop">
+  <div id="app" class="min-h-[400px]">
+    <div class="flex flex-col items-center justify-center h-64">
+      <div class="w-8 h-8 border-2 border-gray-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+      <div class="text-gray-500">Checking authentication...</div>
+    </div>
+  </div>
+
+  <script>
+    import { createClient } from '@supabase/supabase-js';
+
+    const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+    // Immediate redirect if no session - with message
+    const stored = localStorage.getItem('sb_session');
+    if (!stored) {
+      window.location.href = '/admin/login?message=signin_required';
+      throw new Error('No session');
+    }
+
+    try {
+      const session = JSON.parse(stored);
+      if (!session.access_token) {
+        window.location.href = '/admin/login?message=signin_required';
+        throw new Error('No access token');
+      }
+    } catch {
+      window.location.href = '/admin/login?message=signin_required';
+      throw new Error('Invalid session');
+    }
+
+    // Check and refresh session
+    async function getSupabase() {
+      const stored = localStorage.getItem('sb_session');
+      if (!stored) {
+        window.location.href = '/admin/login?message=session_expired';
+        return null;
+      }
+      try {
+        let session = JSON.parse(stored);
+        if (!session.access_token) {
+          window.location.href = '/admin/login?message=session_expired';
+          return null;
+        }
+
+        // Check if token is expired or about to expire (within 5 minutes)
+        if (session.expires_at) {
+          const expiresAt = session.expires_at * 1000;
+          const now = Date.now();
+          const fiveMinutes = 5 * 60 * 1000;
+
+          if (now > expiresAt - fiveMinutes) {
+            // Try to refresh the session
+            if (session.refresh_token) {
+              try {
+                const refreshClient = createClient(supabaseUrl, supabaseAnonKey);
+                const { data: refreshData, error: refreshError } = await refreshClient.auth.refreshSession({
+                  refresh_token: session.refresh_token
+                });
+
+                if (!refreshError && refreshData.session) {
+                  // Update stored session
+                  const newSession = {
+                    access_token: refreshData.session.access_token,
+                    refresh_token: refreshData.session.refresh_token,
+                    user_id: refreshData.session.user.id,
+                    expires_at: refreshData.session.expires_at
+                  };
+                  localStorage.setItem('sb_session', JSON.stringify(newSession));
+                  session = newSession;
+                } else {
+                  // Refresh failed, redirect to login
+                  localStorage.removeItem('sb_session');
+                  window.location.href = '/admin/login?message=session_expired';
+                  return null;
+                }
+              } catch (refreshErr) {
+                localStorage.removeItem('sb_session');
+                window.location.href = '/admin/login?message=session_expired';
+                return null;
+              }
+            }
+          }
+        }
+
+        return createClient(supabaseUrl, supabaseAnonKey, {
+          global: {
+            headers: { Authorization: `Bearer ${session.access_token}` }
+          }
+        });
+      } catch {
+        window.location.href = '/admin/login?message=session_expired';
+        return null;
+      }
+    }
+
+    // Handle API errors (like 401 Unauthorized)
+    function handleApiError(error, message = 'An error occurred') {
+      if (error?.status === 401 || error?.message?.includes('JWT')) {
+        window.location.href = '/admin/login?message=session_expired';
+        return;
+      }
+      const app = document.getElementById('app');
+      if (app) {
+        app.innerHTML = `
+          <div class="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+            <p>${message}</p>
+            <p class="text-sm mt-2">Please try refreshing the page.</p>
+          </div>
+        `;
+      }
+    }
+
+    async function loadDashboard() {
+      const supabase = await getSupabase();
+      if (!supabase) return;
+
+      const app = document.getElementById('app');
+      if (!app) return;
+
+      // Get selected organization from localStorage
+      let org = null;
+      const selectedOrgId = localStorage.getItem('selected_org_id');
+
+      if (selectedOrgId) {
+        const { data } = await supabase
+          .from('organizations')
+          .select('id, name, slug')
+          .eq('id', selectedOrgId)
+          .single();
+        org = data;
+      }
+
+      // Fallback: get first organization via user_organizations or legacy
+      if (!org) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: userOrgs } = await supabase
+            .from('user_organizations')
+            .select('organization_id, organizations(id, name, slug)')
+            .eq('user_id', user.id)
+            .limit(1);
+
+          if (userOrgs && userOrgs.length > 0) {
+            org = userOrgs[0].organizations;
+            localStorage.setItem('selected_org_id', org.id);
+          }
+        }
+      }
+
+      // Legacy fallback
+      if (!org) {
+        const { data: orgs } = await supabase
+          .from('organizations')
+          .select('id, name, slug')
+          .limit(1);
+        org = orgs?.[0];
+      }
+
+      if (!org) {
+        app.innerHTML = `
+          <div class="text-center py-12">
+            <h1 class="text-2xl font-bold text-gray-900 mb-4">Welcome to OpenLoop</h1>
+            <p class="text-gray-600 mb-6">Get started by setting up your organization.</p>
+            <a href="/admin/settings" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+              Set Up Organization
+            </a>
+          </div>
+        `;
+        return;
+      }
+
+      // Fetch stats
+      const [postsRes, announcementsRes] = await Promise.all([
+        supabase.from('posts').select('status').eq('organization_id', org.id),
+        supabase.from('announcements').select('id').eq('organization_id', org.id)
+      ]);
+
+      const posts = postsRes.data || [];
+      const stats = {
+        totalPosts: posts.length,
+        openPosts: posts.filter(p => ['idea', 'planned', 'in_progress'].includes(p.status)).length,
+        completedPosts: posts.filter(p => p.status === 'completed').length,
+        totalAnnouncements: (announcementsRes.data || []).length
+      };
+
+      app.innerHTML = `
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 mb-6">Dashboard</h1>
+
+          <div class="bg-white p-6 rounded-lg border mb-6">
+            <h2 class="text-lg font-semibold mb-2">${org.name}</h2>
+            <p class="text-gray-600 text-sm">Slug: ${org.slug}</p>
+          </div>
+
+          <div class="grid grid-cols-4 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-lg border">
+              <div class="text-3xl font-bold text-gray-900">${stats.totalPosts}</div>
+              <div class="text-gray-600 text-sm">Total Posts</div>
+            </div>
+            <div class="bg-white p-6 rounded-lg border">
+              <div class="text-3xl font-bold text-indigo-600">${stats.openPosts}</div>
+              <div class="text-gray-600 text-sm">Open</div>
+            </div>
+            <div class="bg-white p-6 rounded-lg border">
+              <div class="text-3xl font-bold text-green-600">${stats.completedPosts}</div>
+              <div class="text-gray-600 text-sm">Completed</div>
+            </div>
+            <div class="bg-white p-6 rounded-lg border">
+              <div class="text-3xl font-bold text-gray-900">${stats.totalAnnouncements}</div>
+              <div class="text-gray-600 text-sm">Announcements</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-6">
+            <a href="/admin/posts" class="bg-white p-6 rounded-lg border hover:border-indigo-300 transition-colors">
+              <h3 class="font-semibold text-lg mb-2">Manage Feedback</h3>
+              <p class="text-gray-600 text-sm">Review and manage user feedback</p>
+            </a>
+            <a href="/admin/announcements" class="bg-white p-6 rounded-lg border hover:border-indigo-300 transition-colors">
+              <h3 class="font-semibold text-lg mb-2">Announcements</h3>
+              <p class="text-gray-600 text-sm">Post updates and changelogs</p>
+            </a>
+          </div>
+        </div>
+      `;
+    }
+
+    loadDashboard();
+  </script>
+</AdminLayout>

@@ -1,0 +1,79 @@
+---
+import Widget from '../components/Widget';
+import '../styles/global.css';
+import { supabase } from '../lib/supabase';
+
+const orgSlug = Astro.url.searchParams.get('org') || 'demo';
+
+// Get referrer from headers - if no referer, user is accessing directly
+const referer = Astro.request.headers.get('referer') || '';
+
+// Check if loaded in iframe
+const isIframe = referer && !referer.includes('/widget') && !referer.includes('/admin');
+
+// If not in iframe (direct access), redirect to full feedback page
+if (!isIframe) {
+  return Astro.redirect(`/~/${orgSlug}/feedback`);
+}
+
+// Get organization base_url for CORS check
+const { data: org } = await supabase
+  .from('organizations')
+  .select('base_url')
+  .eq('slug', orgSlug)
+  .single();
+
+const baseUrl = org?.base_url || '';
+
+// CORS check - allow localhost for dev, otherwise check base_url
+let isAllowed = true;
+if (baseUrl && !referer.includes('localhost') && !referer.includes('127.0.0.1')) {
+  try {
+    const refererUrl = new URL(referer);
+    const allowedUrl = new URL(baseUrl);
+    isAllowed = refererUrl.origin === allowedUrl.origin;
+  } catch {
+    isAllowed = false;
+  }
+}
+
+// Security headers
+Astro.response.headers.set('X-Content-Type-Options', 'nosniff');
+Astro.response.headers.set('X-Frame-Options', 'SAMEORIGIN');
+Astro.response.headers.set('X-XSS-Protection', '1; mode=block');
+---
+
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Widget</title>
+    <style is:global>
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        background: transparent;
+      }
+      astro-island {
+        display: block;
+        height: 100%;
+      }
+    </style>
+    <script is:inline>
+      // Disable floating button when widget is loaded in iframe
+      if (!window.OpenLoop) window.OpenLoop = {};
+      window.OpenLoop.showFloatingButton = false;
+    </script>
+  </head>
+  <body>
+    {isAllowed ? (
+      <Widget client:only="react" org={orgSlug} pageMode={true} />
+    ) : (
+      <div style="padding: 20px; text-align: center; color: #666;">
+        <p>Widget not allowed from this domain.</p>
+        <p style="font-size: 12px;">Please configure your base URL in organization settings.</p>
+      </div>
+    )}
+  </body>
+</html>

@@ -1,0 +1,141 @@
+---
+import '../styles/global.css';
+import ToastContainer from '../components/Toast';
+import OrgSwitcher from '../components/OrgSwitcher';
+import AdminLayoutWrapper from '../components/AdminLayoutWrapper';
+
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="OpenLoop Admin" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title}</title>
+  </head>
+  <body class="bg-gray-50 min-h-screen">
+    <!-- Mobile menu button -->
+    <div class="lg:hidden fixed top-4 left-4 z-50">
+      <button id="mobile-menu-btn" class="p-2 bg-white rounded-lg shadow-md border border-gray-200">
+        <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+      </button>
+    </div>
+
+    <div class="flex">
+      <AdminLayoutWrapper client:only="react" />
+      <main class="flex-1 p-4 lg:p-8 lg:ml-0 ml-0">
+        <slot />
+      </main>
+    </div>
+    
+    <script is:inline>
+      // Mobile menu toggle
+      const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+
+      function toggleSidebar() {
+        sidebar.classList.toggle('-translate-x-full');
+        overlay.classList.toggle('hidden');
+      }
+
+      mobileMenuBtn?.addEventListener('click', toggleSidebar);
+      overlay?.addEventListener('click', toggleSidebar);
+    </script>
+
+    <!-- Toast notifications -->
+    <ToastContainer client:load />
+
+    <!-- Global toast function -->
+    <script is:inline>
+      window.showToast = function(message, type = 'success') {
+        window.dispatchEvent(new CustomEvent('show-toast', { detail: { message, type } }));
+      };
+
+      // Store selected organization for client-side scripts
+      function updateSelectedOrg() {
+        const selectedOrgId = localStorage.getItem('selected_org_id');
+        window.selectedOrgId = selectedOrgId;
+      }
+
+      // Initialize on page load
+      updateSelectedOrg();
+
+      // Listen for storage changes (when user switches org in React component)
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'selected_org_id') {
+          updateSelectedOrg();
+          window.location.reload();
+        }
+      });
+
+      // Also listen for custom event from React component
+      window.addEventListener('org-changed', () => {
+        updateSelectedOrg();
+      });
+    </script>
+
+    <script>
+      import { createClient } from '@supabase/supabase-js';
+
+      const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+      // Check auth on page load
+      const stored = localStorage.getItem('sb_session');
+      if (!stored) {
+        window.location.href = '/admin/login?message=signin_required';
+      } else {
+        try {
+          const parsed = JSON.parse(stored);
+          if (!parsed.access_token) {
+            window.location.href = '/admin/login?message=signin_required';
+          }
+          // Check if session is expired
+          if (parsed.expires_at && parsed.expires_at * 1000 < Date.now()) {
+            localStorage.removeItem('sb_session');
+            window.location.href = '/admin/login?message=session_expired';
+          }
+        } catch (e) {
+          window.location.href = '/admin/login?message=signin_required';
+        }
+      }
+
+      // Listen for auth state changes (handles session expiry)
+      supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'TOKEN_REFRESHED' && session) {
+          // Update stored session with new tokens
+          localStorage.setItem('sb_session', JSON.stringify({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+            user_id: session.user.id,
+            expires_at: session.expires_at
+          }));
+        }
+        if (event === 'SIGNED_OUT') {
+          localStorage.removeItem('sb_session');
+          window.location.href = '/admin/login?message=session_expired';
+        }
+      });
+
+      // Sign out handler
+      document.getElementById('signout-btn')?.addEventListener('click', async () => {
+        if (confirm('Are you sure you want to sign out?')) {
+          await supabase.auth.signOut();
+          localStorage.removeItem('sb_session');
+          window.location.href = '/admin/login';
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,454 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Feedback | OpenLoop">
+  <div id="app">
+    <div class="flex items-center justify-center h-64">
+      <div class="text-gray-500">Loading...</div>
+    </div>
+  </div>
+
+  <script>
+    import { createClient } from '@supabase/supabase-js';
+
+    const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+    // Simple session check
+    function getSupabase() {
+      const stored = localStorage.getItem('sb_session');
+      if (!stored) {
+        window.location.href = '/admin/login?message=session_expired';
+        return null;
+      }
+      try {
+        const session = JSON.parse(stored);
+        if (!session.access_token) {
+          window.location.href = '/admin/login?message=session_expired';
+          return null;
+        }
+        return createClient(supabaseUrl, supabaseAnonKey, {
+          global: {
+            headers: { Authorization: `Bearer ${session.access_token}` }
+          }
+        });
+      } catch {
+        window.location.href = '/admin/login?message=session_expired';
+        return null;
+      }
+    }
+
+    // Handle API errors
+    function handleApiError(error) {
+      if (error?.status === 401 || error?.message?.includes('JWT')) {
+        window.location.href = '/admin/login?message=session_expired';
+        return;
+      }
+    }
+
+    const STATUSES = ['pending', 'idea', 'planned', 'in_progress', 'completed', 'closed'];
+    const CATEGORIES = ['feature', 'bug', 'improvement', 'other'];
+
+    // Category colors
+    const CATEGORY_COLORS = {
+      feature: 'bg-indigo-100 text-indigo-700',
+      bug: 'bg-red-100 text-red-700',
+      improvement: 'bg-blue-100 text-blue-700',
+      other: 'bg-gray-100 text-gray-700'
+    };
+
+    // Status colors
+    const STATUS_COLORS = {
+      pending: 'bg-yellow-100 text-yellow-700',
+      idea: 'bg-blue-100 text-blue-700',
+      planned: 'bg-purple-100 text-purple-700',
+      in_progress: 'bg-indigo-100 text-indigo-700',
+      completed: 'bg-green-100 text-green-700',
+      closed: 'bg-gray-100 text-gray-500'
+    };
+
+    // Sort icons
+    function getSortIcon(column, currentSort) {
+      if (currentSort.column !== column) {
+        return `<svg class="w-4 h-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg>`;
+      }
+      return currentSort.direction === 'asc'
+        ? `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>`
+        : `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>`;
+    }
+
+    async function loadPosts(org) {
+      const supabase = getSupabase();
+      if (!supabase) return;
+
+      const app = document.getElementById('app');
+      const orgId = org.id;
+      const orgSlug = org.slug;
+
+      let posts = [];
+      let filter = 'all';
+      let categoryFilter = 'all';
+      let search = '';
+      let sort = { column: 'created_at', direction: 'desc' };
+
+      async function render() {
+        let query = supabase
+          .from('posts')
+          .select('*')
+          .eq('organization_id', orgId);
+
+        if (filter !== 'all') {
+          query = query.eq('status', filter);
+        }
+
+        const { data } = await query;
+        posts = data || [];
+
+        // Filter by category
+        let filteredPosts = posts;
+        if (categoryFilter !== 'all') {
+          filteredPosts = filteredPosts.filter(p => p.category === categoryFilter);
+        }
+
+        // Filter by search
+        filteredPosts = filteredPosts.filter(p =>
+          p.title.toLowerCase().includes(search.toLowerCase()) ||
+          p.description?.toLowerCase().includes(search.toLowerCase()) ||
+          p.email?.toLowerCase().includes(search.toLowerCase())
+        );
+
+        // Sort
+        filteredPosts = filteredPosts.sort((a, b) => {
+          let valA = a[sort.column];
+          let valB = b[sort.column];
+
+          // Handle dates
+          if (sort.column === 'created_at') {
+            valA = new Date(valA).getTime();
+            valB = new Date(valB).getTime();
+          }
+
+          // Handle numbers
+          if (sort.column === 'votes') {
+            valA = valA || 0;
+            valB = valB || 0;
+          }
+
+          // Handle strings
+          if (typeof valA === 'string') {
+            valA = valA.toLowerCase();
+            valB = valB ? valB.toLowerCase() : '';
+          }
+
+          if (valA < valB) return sort.direction === 'asc' ? -1 : 1;
+          if (valA > valB) return sort.direction === 'asc' ? 1 : -1;
+          return 0;
+        });
+
+        app.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between mb-6">
+              <div class="flex items-center gap-3">
+                <h1 class="text-2xl font-bold text-gray-900">Feedback</h1>
+                <a href="/~/${orgSlug}/feedback" target="_blank" class="flex items-center gap-1 text-sm text-gray-500 hover:text-indigo-600">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                  See public
+                </a>
+              </div>
+            </div>
+
+            <!-- Filters Row -->
+            <div class="bg-white rounded-lg border p-4 mb-6">
+              <div class="flex flex-wrap items-center gap-4">
+                <div class="flex-1 min-w-[200px]">
+                  <input
+                    type="text"
+                    placeholder="Search title, description, email..."
+                    value="${search}"
+                    class="w-full px-3 py-2 border rounded-lg text-sm"
+                    id="search-input"
+                  />
+                </div>
+                <div class="flex items-center gap-2">
+                  <label class="text-sm text-gray-600">Status:</label>
+                  <select id="filter-select" class="px-3 py-2 border rounded-lg text-sm min-w-[140px]">
+                    <option value="all" ${filter === 'all' ? 'selected' : ''}>All Statuses</option>
+                    ${STATUSES.map(s => `<option value="${s}" ${filter === s ? 'selected' : ''}>${s.replace('_', ' ').replace(/\\b\\w/g, l => l.toUpperCase())}</option>`).join('')}
+                  </select>
+                </div>
+                <div class="flex items-center gap-2">
+                  <label class="text-sm text-gray-600">Type:</label>
+                  <select id="category-filter" class="px-3 py-2 border rounded-lg text-sm min-w-[120px]">
+                    <option value="all" ${categoryFilter === 'all' ? 'selected' : ''}>All Types</option>
+                    ${CATEGORIES.map(c => `<option value="${c}" ${categoryFilter === c ? 'selected' : ''}>${c.charAt(0).toUpperCase() + c.slice(1)}</option>`).join('')}
+                  </select>
+                </div>
+                <div class="text-sm text-gray-500">
+                  ${filteredPosts.length} post${filteredPosts.length !== 1 ? 's' : ''}
+                </div>
+              </div>
+            </div>
+
+            <!-- Table -->
+            <div class="bg-white rounded-lg border overflow-hidden">
+              <div class="overflow-x-auto">
+                <table class="w-full">
+                  <thead class="bg-gray-50 border-b">
+                    <tr>
+                      <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" data-sort="status">
+                        <div class="flex items-center gap-1">
+                          Status
+                          ${getSortIcon('status', sort)}
+                        </div>
+                      </th>
+                      <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" data-sort="title">
+                        <div class="flex items-center gap-1">
+                          Title
+                          ${getSortIcon('title', sort)}
+                        </div>
+                      </th>
+                      <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                      <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" data-sort="votes">
+                        <div class="flex items-center gap-1">
+                          Votes
+                          ${getSortIcon('votes', sort)}
+                        </div>
+                      </th>
+                      <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                      <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" data-sort="created_at">
+                        <div class="flex items-center gap-1">
+                          Date
+                          ${getSortIcon('created_at', sort)}
+                        </div>
+                      </th>
+                      <th class="text-right px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-200">
+                    ${filteredPosts.length === 0 ? `
+                      <tr>
+                        <td colspan="7" class="px-4 py-8 text-center text-gray-500">No posts found</td>
+                      </tr>
+                    ` : filteredPosts.map(post => `
+                      <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3">
+                          <span class="text-xs px-2 py-1 rounded-full ${STATUS_COLORS[post.status] || 'bg-gray-100 text-gray-700'}">${post.status.replace('_', ' ')}</span>
+                        </td>
+                        <td class="px-4 py-3">
+                          <div class="max-w-xs">
+                            <div class="font-medium text-gray-900 truncate">${post.title}</div>
+                            ${post.description ? `<div class="text-sm text-gray-500 truncate">${post.description}</div>` : ''}
+                          </div>
+                        </td>
+                        <td class="px-4 py-3">
+                          <span class="text-xs px-2 py-1 rounded-full ${CATEGORY_COLORS[post.category] || 'bg-gray-100 text-gray-700'}">${post.category || 'other'}</span>
+                        </td>
+                        <td class="px-4 py-3">
+                          <div class="flex items-center gap-1">
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                            </svg>
+                            <span class="font-medium">${post.votes || 0}</span>
+                          </div>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-500">
+                          ${post.email || '-'}
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-500">
+                          ${new Date(post.created_at).toLocaleDateString()}
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                          <div class="flex items-center justify-end gap-2">
+                            ${post.status === 'pending' ? `
+                              <button data-approve="${post.id}" class="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700">Approve</button>
+                            ` : ''}
+                            <select data-id="${post.id}" class="px-2 py-1 text-xs border rounded status-select">
+                              ${STATUSES.map(s => `<option value="${s}" ${post.status === s ? 'selected' : ''}>${s.replace('_', ' ')}</option>`).join('')}
+                            </select>
+                            <button data-delete="${post.id}" class="p-1 text-red-600 hover:bg-red-50 rounded" title="Delete">
+                              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        `;
+
+        // Event listeners
+        document.getElementById('search-input')?.addEventListener('input', (e) => {
+          search = e.target.value;
+          render();
+        });
+
+        document.getElementById('filter-select')?.addEventListener('change', (e) => {
+          filter = e.target.value;
+          render();
+        });
+
+        document.getElementById('category-filter')?.addEventListener('change', (e) => {
+          categoryFilter = e.target.value;
+          render();
+        });
+
+        // Sort handlers
+        document.querySelectorAll('[data-sort]').forEach(th => {
+          th.addEventListener('click', () => {
+            const column = th.dataset.sort;
+            if (sort.column === column) {
+              sort.direction = sort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+              sort.column = column;
+              sort.direction = 'desc';
+            }
+            render();
+          });
+        });
+
+        document.querySelectorAll('.status-select').forEach(select => {
+          select.addEventListener('change', async (e) => {
+            const supabase = getSupabase();
+            if (!supabase) return;
+            const newStatus = e.target.value;
+            const postId = e.target.dataset.id;
+
+            // Get current post for notification
+            const post = posts.find(p => p.id === postId);
+            const oldStatus = post?.status;
+
+            const { error } = await supabase.from('posts').update({ status: newStatus }).eq('id', postId);
+            if (!error) {
+              // Send status change notification
+              try {
+                const origin = window.location.origin;
+                await fetch(`${origin}/api/send-notification`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    organizationSlug: orgSlug,
+                    postTitle: post?.title || 'Unknown',
+                    postDescription: `Status changed from ${oldStatus} to ${newStatus}`,
+                    postId,
+                    notificationType: 'status_change'
+                  })
+                });
+              } catch (notifyError) {
+                console.error('Failed to send status notification:', notifyError);
+              }
+              render();
+            }
+          });
+        });
+
+        document.querySelectorAll('[data-delete]').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            if (!confirm('Delete this post?')) return;
+            const supabase = getSupabase();
+            if (!supabase) return;
+            const { error } = await supabase.from('posts').delete().eq('id', e.target.dataset.delete);
+            if (!error) {
+              render();
+            }
+          });
+        });
+
+        document.querySelectorAll('[data-approve]').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const supabase = getSupabase();
+            if (!supabase) return;
+            const postId = e.target.dataset.approve;
+
+            // Get post for notification
+            const post = posts.find(p => p.id === postId);
+
+            const { error } = await supabase.from('posts').update({ status: 'idea' }).eq('id', postId);
+            if (!error) {
+              // Send status change notification for approval
+              try {
+                const origin = window.location.origin;
+                await fetch(`${origin}/api/send-notification`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    organizationSlug: orgSlug,
+                    postTitle: post?.title || 'Unknown',
+                    postDescription: 'Status changed from pending to idea (approved)',
+                    postId,
+                    notificationType: 'status_change'
+                  })
+                });
+              } catch (notifyError) {
+                console.error('Failed to send approval notification:', notifyError);
+              }
+              render();
+            }
+          });
+        });
+      }
+
+      render();
+    }
+
+    async function load() {
+      const supabase = getSupabase();
+      if (!supabase) return;
+
+      const app = document.getElementById('app');
+      if (!app) return;
+
+      // Get selected organization from localStorage
+      let org = null;
+      const selectedOrgId = localStorage.getItem('selected_org_id');
+
+      if (selectedOrgId) {
+        const { data } = await supabase
+          .from('organizations')
+          .select('id, slug')
+          .eq('id', selectedOrgId)
+          .single();
+        org = data;
+      }
+
+      // Fallback: get first organization via user_organizations or legacy
+      if (!org) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: userOrgs } = await supabase
+            .from('user_organizations')
+            .select('organization_id, organizations(id, slug)')
+            .eq('user_id', user.id)
+            .limit(1);
+
+          if (userOrgs && userOrgs.length > 0) {
+            org = userOrgs[0].organizations;
+            localStorage.setItem('selected_org_id', org.id);
+          }
+        }
+      }
+
+      // Legacy fallback
+      if (!org) {
+        const { data: orgs } = await supabase.from('organizations').select('id, slug').limit(1);
+        org = orgs?.[0];
+      }
+
+      if (!org) {
+        app.innerHTML = '<p class="text-center text-gray-500 py-8">No organization found</p>';
+        return;
+      }
+
+      loadPosts(org);
+    }
+
+    load();
+  </script>
+</AdminLayout>

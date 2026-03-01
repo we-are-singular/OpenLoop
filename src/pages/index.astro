@@ -1,0 +1,450 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { supabase } from '../lib/supabase';
+import { MessageSquare, Map, Megaphone, Check } from 'lucide-react';
+
+// Get org for demo
+const orgSlug = 'openloop';
+const { data: organization } = await supabase
+  .from('organizations')
+  .select('id, name, slug')
+  .eq('slug', orgSlug)
+  .single();
+
+const { data: widgetSettings } = await supabase
+  .from('widget_settings')
+  .select('accent_color')
+  .eq('organization_id', organization?.id)
+  .single();
+
+const accentColor = widgetSettings?.accent_color || '#6366f1';
+---
+
+<Layout title="OpenLoop - Feedback Hub for SaaS">
+  <!-- Hero -->
+  <div class="bg-white">
+    <header class="max-w-6xl mx-auto px-6 py-6 flex justify-between items-center">
+      <div class="text-xl font-bold text-gray-900">OpenLoop</div>
+      <nav class="flex gap-6 items-center">
+        <a href="#features" class="text-gray-600 hover:text-gray-900">Features</a>
+        <a href="#pricing" class="text-gray-600 hover:text-gray-900">Pricing</a>
+        <a href="/admin" id="nav-auth-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Sign In</a>
+      </nav>
+    </header>
+
+    <div class="max-w-4xl mx-auto px-6 py-20 text-center">
+      <h1 class="text-5xl font-bold text-gray-900 mb-6 leading-tight">
+        Collect feedback. Share your roadmap.<br />
+        <span class="text-indigo-600">Keep users in the loop.</span>
+      </h1>
+      <p class="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+        The feedback hub that puts your users in control. Gather ideas, prioritize features, and announce updates — all in one place.
+      </p>
+      <div class="flex gap-4 justify-center">
+        <a href="/admin/login" class="px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700">
+          Get Started Free
+        </a>
+        <a href="#features" class="px-6 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50">
+          See Features
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Widget Demo -->
+  <div class="bg-gray-50 py-12 border-t border-gray-200">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="text-center mb-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-2">See it in action</h2>
+        <p class="text-gray-600">Try the widget below — it's live with our demo organization</p>
+      </div>
+
+      <!-- Interactive Configuration -->
+      <div class="bg-white rounded-xl p-6 shadow-sm mb-8">
+        <div class="flex flex-wrap gap-6 items-center justify-center mb-6">
+          <!-- Position Toggle -->
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-medium text-gray-700">Position:</span>
+            <div class="flex rounded-lg overflow-hidden border border-gray-300">
+              <button id="pos-left" class="px-4 py-2 text-sm font-medium transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200">
+                Left
+              </button>
+              <button id="pos-right" class="px-4 py-2 text-sm font-medium transition-colors bg-indigo-600 text-white hover:bg-indigo-700">
+                Right
+              </button>
+            </div>
+          </div>
+
+          <!-- Color Picker -->
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-medium text-gray-700">Color:</span>
+            <input type="color" id="accent-color" value="#6366f1" class="w-10 h-10 rounded cursor-pointer border border-gray-300" />
+            <span id="color-value" class="text-sm text-gray-500">#6366f1</span>
+          </div>
+
+          <!-- Button Toggle -->
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-medium text-gray-700">Button:</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="toggle-floating" class="sr-only peer" checked />
+              <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-500"></div>
+              <span id="toggle-label" class="ms-3 text-sm font-medium text-gray-700">Visible</span>
+            </label>
+          </div>
+
+          <!-- Open Button -->
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-medium text-gray-700">Widget:</span>
+            <button id="open-widget" class="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-indigo-100 text-indigo-700 border border-indigo-200 hover:bg-indigo-200">
+              Open
+            </button>
+          </div>
+        </div>
+
+        <!-- Generated Code -->
+        <div class="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+          <pre class="text-sm text-green-400 font-mono"><code id="code-content"></code></pre>
+        </div>
+      </div>
+
+      <!-- Demo Area -->
+      <div class="bg-gray-100 rounded-xl p-8 flex items-center justify-center min-h-[200px] relative">
+        <p class="text-center text-gray-500 text-sm">Live preview — widget will appear at the corner you select</p>
+      </div>
+      <p class="text-center text-gray-500 text-sm mt-4">
+        Or embed as page widget with our script.
+      </p>
+    </div>
+  </div>
+
+  <!-- Features -->
+  <div id="features" class="bg-gray-50 py-20">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">Everything you need</h2>
+        <p class="text-gray-600">Three tools in one. No integrations required.</p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="bg-white p-8 rounded-xl shadow-sm">
+          <div class="mb-4 text-indigo-600"><MessageSquare size={36} /></div>
+          <h3 class="text-xl font-semibold text-gray-900 mb-2">Feedback Widget</h3>
+          <p class="text-gray-600">
+            Embeddable widget that lets users submit feedback and vote on ideas. Works with any app — just drop in the script.
+          </p>
+        </div>
+        <div class="bg-white p-8 rounded-xl shadow-sm">
+          <div class="mb-4 text-indigo-600"><Map size={36} /></div>
+          <h3 class="text-xl font-semibold text-gray-900 mb-2">Public Roadmap</h3>
+          <p class="text-gray-600">
+            Beautiful public roadmap with four columns: Ideas, Planned, In Progress, and Completed. Users see exactly what's coming.
+          </p>
+        </div>
+        <div class="bg-white p-8 rounded-xl shadow-sm">
+          <div class="mb-4 text-indigo-600"><Megaphone size={36} /></div>
+          <h3 class="text-xl font-semibold text-gray-900 mb-2">Announcements</h3>
+          <p class="text-gray-600">
+            Post changelogs and updates. "This week on [Product]" — link to your blog posts or write directly.
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-16 grid md:grid-cols-2 gap-8">
+        <div class="bg-white p-8 rounded-xl shadow-sm">
+          <h3 class="text-lg font-semibold text-gray-900 mb-3">User ID Tracking</h3>
+          <p class="text-gray-600">
+            Pass a user ID from your app — no accounts needed. Each user gets one vote per idea. Simple and abuse-resistant.
+          </p>
+        </div>
+        <div class="bg-white p-8 rounded-xl shadow-sm">
+          <h3 class="text-lg font-semibold text-gray-900 mb-3">Admin Dashboard</h3>
+          <p class="text-gray-600">
+            Manage feedback, change status, create announcements. Filter, search, and keep your pipeline organized.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- How it works -->
+  <div class="bg-white py-20">
+    <div class="max-w-4xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">How it works</h2>
+      </div>
+
+      <div class="space-y-8">
+        <div class="flex gap-6">
+          <div class="w-12 h-12 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">1</div>
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">Add the widget to your app</h3>
+            <p class="text-gray-600 mt-1">Copy the embed code and drop it into your website. It works with any tech stack.</p>
+          </div>
+        </div>
+        <div class="flex gap-6">
+          <div class="w-12 h-12 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">2</div>
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">Users submit and vote</h3>
+            <p class="text-gray-600 mt-1">Users submit ideas and upvote the ones they want most. You see what matters to them.</p>
+          </div>
+        </div>
+        <div class="flex gap-6">
+          <div class="w-12 h-12 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">3</div>
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">Curate your roadmap</h3>
+            <p class="text-gray-600 mt-1">Move ideas to Planned, track progress, and show users what's coming. They love transparency.</p>
+          </div>
+        </div>
+        <div class="flex gap-6">
+          <div class="w-12 h-12 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">4</div>
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">Ship and announce</h3>
+            <p class="text-gray-600 mt-1">When you ship, post an announcement. Link to your blog or write directly. Keep users in the loop.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pricing -->
+  <div id="pricing" class="bg-gray-50 py-20">
+    <div class="max-w-4xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl font-bold text-gray-900 mb-4">Simple pricing</h2>
+        <p class="text-gray-600">Self-hosted. No per-user fees. Ever.</p>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+        <!-- Free -->
+        <div class="bg-white p-8 rounded-xl shadow-sm border-2 border-transparent">
+          <h3 class="text-xl font-semibold text-gray-900 mb-2">Self-Hosted</h3>
+          <div class="text-4xl font-bold text-gray-900 mb-4">$0</div>
+          <p class="text-gray-600 text-sm mb-6">Run it on your own infrastructure.</p>
+          <ul class="space-y-3 text-gray-600 text-sm mb-8">
+            <li class="flex items-center gap-2"><Check size={14} className="text-green-500 flex-shrink-0" /> Unlimited organizations</li>
+            <li class="flex items-center gap-2"><Check size={14} className="text-green-500 flex-shrink-0" /> Unlimited feedback</li>
+            <li class="flex items-center gap-2"><Check size={14} className="text-green-500 flex-shrink-0" /> Unlimited users</li>
+            <li class="flex items-center gap-2"><Check size={14} className="text-green-500 flex-shrink-0" /> Your own Supabase</li>
+          </ul>
+            <a href="https://github.com/openloop/feedback-hub" class="block text-center px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50">
+            View on GitHub
+          </a>
+        </div>
+
+        <!-- Pro -->
+        <div class="bg-indigo-600 p-8 rounded-xl shadow-sm text-white relative">
+          <div class="absolute top-0 right-0 bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tr-lg">Coming soon</div>
+          <h3 class="text-xl font-semibold mb-2">Managed</h3>
+          <div class="text-4xl font-bold mb-4">$4.99<span class="text-lg font-normal">/mo</span></div>
+          <p class="text-indigo-200 text-sm mb-6">We handle hosting. You focus on your product.</p>
+          <ul class="space-y-3 text-indigo-100 text-sm mb-8">
+            <li class="flex items-center gap-2"><Check size={14} className="text-indigo-200 flex-shrink-0" /> 5 organizations</li>
+            <li class="flex items-center gap-2"><Check size={14} className="text-indigo-200 flex-shrink-0" /> Unlimited feedback</li>
+            <li class="flex items-center gap-2"><Check size={14} className="text-indigo-200 flex-shrink-0" /> Unlimited voters</li>
+            <li class="flex items-center gap-2"><Check size={14} className="text-indigo-200 flex-shrink-0" /> Custom domain</li>
+          </ul>
+          <a class="block opacity-50 text-center px-4 py-2 bg-white text-indigo-600 rounded-lg font-medium hover:bg-gray-100">
+            Coming Soon
+          </a>
+        </div>
+      </div>
+
+      <p class="text-center text-gray-500 text-sm mt-8">
+        Need more organizations? Open an issue on GitHub
+      </p>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="bg-white py-20">
+    <div class="max-w-2xl mx-auto px-6 text-center">
+      <h2 class="text-3xl font-bold text-gray-900 mb-4">Ready to get started?</h2>
+      <p class="text-gray-600 mb-8">
+        Join teams who keep their users in the loop with OpenLoop.
+      </p>
+      <a href="/admin/login" class="inline-block px-8 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700">
+        Start Free
+      </a>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="bg-gray-900 text-gray-400 py-12">
+    <div class="max-w-6xl mx-auto px-6 flex justify-between items-center">
+      <div>
+        <div class="text-white font-bold mb-2">OpenLoop</div>
+        <p class="text-sm">Open source feedback hub</p>
+      </div>
+      <div class="flex gap-6 text-sm">
+        <a href="#" class="hover:text-white">Privacy</a>
+        <a href="#" class="hover:text-white">Terms</a>
+        <a href="#" class="hover:text-white">Contact</a>
+      </div>
+    </div>
+  </footer>
+  <!------>
+<script is:inline>
+  // Interactive widget configuration
+  (function() {
+    const posLeft = document.getElementById('pos-left');
+    const posRight = document.getElementById('pos-right');
+    const accentColorInput = document.getElementById('accent-color');
+    const colorValue = document.getElementById('color-value');
+    const toggleFloating = document.getElementById('toggle-floating');
+    const toggleLabel = document.getElementById('toggle-label');
+    const openWidget = document.getElementById('open-widget');
+    const codeContent = document.getElementById('code-content');
+
+    // Get current config or defaults
+    let config = {
+      accentColor: '#6366f1',
+      anchor: 'right',
+      showFloatingButton: true
+    };
+
+    // Try to get existing config from window.OpenLoop if already set
+    if (window.OpenLoop) {
+      config = {
+        accentColor: window.OpenLoop.accentColor || '#6366f1',
+        anchor: window.OpenLoop.anchor || window.OpenLoop.position || 'right',
+        showFloatingButton: window.OpenLoop.showFloatingButton !== false
+      };
+    }
+
+    // Update UI to match current config
+    function updateUI() {
+      // Position buttons
+      if (config.anchor === 'left') {
+        posLeft.classList.add('bg-indigo-600', 'text-white');
+        posLeft.classList.remove('bg-gray-100', 'text-gray-700');
+        posRight.classList.remove('bg-indigo-600', 'text-white');
+        posRight.classList.add('bg-gray-100', 'text-gray-700');
+      } else {
+        posRight.classList.add('bg-indigo-600', 'text-white');
+        posRight.classList.remove('bg-gray-100', 'text-gray-700');
+        posLeft.classList.remove('bg-indigo-600', 'text-white');
+        posLeft.classList.add('bg-gray-100', 'text-gray-700');
+      }
+
+      // Color
+      accentColorInput.value = config.accentColor;
+      colorValue.textContent = config.accentColor;
+
+      // Floating button toggle
+      if (config.showFloatingButton) {
+        toggleFloating.checked = true;
+        toggleLabel.textContent = 'Visible';
+      } else {
+        toggleFloating.checked = false;
+        toggleLabel.textContent = 'Hidden';
+      }
+
+      // Code preview - escape script tags for display
+      const code = '<script>\n' +
+        '  window.OpenLoop = {\n' +
+        '    org: \'openloop\',\n' +
+        '    accentColor: \'' + config.accentColor + '\',\n' +
+        '    anchor: \'' + config.anchor + '\',\n' +
+        '    showFloatingButton: ' + config.showFloatingButton + '\n' +
+        '  };\n' +
+        '<\/script>\n' +
+        '<script src="https://yourdomain.com/embed.js" async><\/script>';
+      codeContent.textContent = code;
+    }
+
+    // Apply config to window.OpenLoop
+    function applyConfig() {
+      window.OpenLoop = window.OpenLoop || {};
+      window.OpenLoop.org = 'openloop';
+      window.OpenLoop.accentColor = config.accentColor;
+      window.OpenLoop.anchor = config.anchor;
+      window.OpenLoop.showFloatingButton = config.showFloatingButton;
+
+      // Trigger embed.js to reinitialize if it already ran
+      // We'll do this by reloading the script
+      const existingContainer = document.getElementById('openloop-container');
+      if (existingContainer) {
+        existingContainer.remove();
+      }
+
+      // Always re-run embed.js - showFloatingButton only controls button visibility, not widget loading
+      const script = document.createElement('script');
+      script.src = '/embed.js';
+      script.async = true;
+      document.body.appendChild(script);
+    }
+
+    // Event listeners
+    posLeft.addEventListener('click', function() {
+      config.anchor = 'left';
+      updateUI();
+      applyConfig();
+    });
+
+    posRight.addEventListener('click', function() {
+      config.anchor = 'right';
+      updateUI();
+      applyConfig();
+    });
+
+    accentColorInput.addEventListener('input', function() {
+      config.accentColor = this.value;
+      updateUI();
+      applyConfig();
+    });
+
+    toggleFloating.addEventListener('change', function() {
+      config.showFloatingButton = this.checked;
+      updateUI();
+      applyConfig();
+    });
+
+    openWidget.addEventListener('click', function() {
+
+      if (window.OpenLoop && typeof window.OpenLoop.open === 'function') {
+        window.OpenLoop.open();
+      } else {
+        // If OpenLoop not loaded yet, try to load embed.js
+        const script = document.createElement('script');
+        script.src = '/embed.js';
+        script.async = true;
+        script.onload = function() {
+          if (window.OpenLoop && typeof window.OpenLoop.open === 'function') {
+            window.OpenLoop.open(data);
+          }
+        };
+        document.body.appendChild(script);
+      }
+    });
+
+    // Initialize - set initial code content
+    updateUI();
+  })();
+
+  // Check if logged in and update nav button
+  (function() {
+    const stored = localStorage.getItem('sb_session');
+    if (stored) {
+      try {
+        const session = JSON.parse(stored);
+        if (session.access_token) {
+          const btn = document.getElementById('nav-auth-btn');
+          if (btn) {
+            btn.textContent = 'Dashboard';
+            btn.href = '/admin';
+          }
+        }
+      } catch {}
+    }
+  })();
+</script>
+<script>
+  window.OpenLoop = {
+    org: 'openloop',
+    accentColor: '#6366f1',
+    anchor: 'right',
+    showFloatingButton: true
+  };
+</script>
+<script is:inline src="/embed.js"></script>
+</Layout>

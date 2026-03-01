@@ -1,0 +1,101 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import OrgNav from '../../../components/OrgNav';
+import OrgFooter from '../../../components/OrgFooter';
+import SocialShare from '../../../components/SocialShare';
+import { supabase, type Announcement } from '../../../lib/supabase';
+import { parseMarkdown } from '../../../lib/markdown';
+
+export const prerender = false;
+
+const { slug } = Astro.params;
+const { url } = Astro;
+
+if (!slug) {
+  return Astro.redirect('/404');
+}
+
+// Get org
+const { data: organization } = await supabase
+  .from('organizations')
+  .select('id, name, slug')
+  .eq('slug', slug)
+  .single();
+
+if (!organization) {
+  return Astro.redirect('/404');
+}
+
+// Get announcements - filter and sort on client side
+const { data: allAnnouncements } = await supabase
+  .from('announcements')
+  .select('*')
+  .eq('organization_id', organization.id)
+  .order('published_at', { ascending: false });
+
+const announcements = allAnnouncements?.filter(a => a.published_at !== null) || [];
+
+const formatDate = (dateStr: string | null) => {
+  if (!dateStr) return '';
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+};
+
+const isNew = (dateStr: string | null) => {
+  if (!dateStr) return false;
+  const published = new Date(dateStr);
+  const now = new Date();
+  const diffDays = (now.getTime() - published.getTime()) / (1000 * 60 * 60 * 24);
+  return diffDays <= 7;
+};
+---
+
+<Layout title={`${organization.name} Announcements`} rssUrl={`${url.origin}/api/rss?org=${slug}`}>
+  <OrgNav client:load org={slug || ''} orgName={organization.name} currentPage="announcements" />
+  <div class="max-w-3xl mx-auto px-6 py-12">
+    <div class="text-center mb-12">
+      <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">What's New</h1>
+      <p class="text-gray-600">Latest updates from {organization.name}</p>
+      <a href={`${url.origin}/api/rss?org=${slug}`} class="inline-flex items-center gap-2 mt-4 text-sm text-gray-500 hover:text-orange-600 transition-colors" title="RSS Feed">
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19 7.38 20 6.18 20C5 20 4 19 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1Z"/>
+        </svg>
+        RSS Feed
+      </a>
+    </div>
+
+    <div class="space-y-8">
+      {announcements?.length === 0 && (
+        <p class="text-center text-gray-400 py-8">No announcements yet</p>
+      )}
+
+      {announcements?.map((announcement: Announcement) => {
+        const announcementUrl = `${url.origin}/~/${slug}/announcements#announcement-${announcement.id}`;
+        return (
+        <article id={`announcement-${announcement.id}`} class="bg-white rounded-lg border border-gray-200 p-6">
+          <div class="flex items-start justify-between mb-4">
+            <a href={`#announcement-${announcement.id}`} class="hover:text-indigo-600 transition-colors">
+              <h2 class="text-xl font-semibold text-gray-900">{announcement.title}</h2>
+            </a>
+            {isNew(announcement.published_at) && (
+              <span class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-medium">New</span>
+            )}
+          </div>
+
+          <time class="text-sm text-gray-500 mb-4 block">
+            {formatDate(announcement.published_at)}
+          </time>
+
+          <div class="prose prose-sm max-w-none text-gray-700" set:html={parseMarkdown(announcement.content)} />
+
+          <SocialShare client:load url={announcementUrl} title={announcement.title} />
+        </article>
+      );
+      })}
+    </div>
+  </div>
+  <OrgFooter org={slug || ''} />
+</Layout>

@@ -1,0 +1,381 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<script is:inline>
+  // Check if already logged in
+  const stored = localStorage.getItem('sb_session');
+  if (stored) {
+    try {
+      const session = JSON.parse(stored);
+      if (session.access_token) {
+        window.location.href = '/admin';
+      }
+    } catch {}
+  }
+
+  // Pre-fill email if "remember me" was checked
+  const rememberedEmail = localStorage.getItem('remember_email');
+  if (rememberedEmail) {
+    const emailInput = document.getElementById('email');
+    if (emailInput) {
+      emailInput.value = rememberedEmail;
+      const rememberCheck = document.getElementById('remember-me') as HTMLInputElement;
+      if (rememberCheck) rememberCheck.checked = true;
+    }
+  }
+
+  // Show redirect message if present
+  const urlParams = new URLSearchParams(window.location.search);
+  const message = urlParams.get('message');
+  const redirectMsg = document.getElementById('redirect-message');
+  const subtitle = document.getElementById('login-subtitle');
+
+  if (message === 'session_expired') {
+    if (redirectMsg) {
+      redirectMsg.textContent = 'Your session has expired. Please sign in again.';
+      redirectMsg.classList.remove('hidden');
+    }
+  } else if (message === 'signin_required') {
+    if (redirectMsg) {
+      redirectMsg.textContent = 'You need to sign in to access the admin dashboard.';
+      redirectMsg.classList.remove('hidden');
+    }
+    if (subtitle) {
+      subtitle.classList.add('hidden');
+    }
+  }
+</script>
+
+<Layout title="Sign In | OpenLoop">
+  <div class="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+    <div class="max-w-md w-full">
+      <div class="text-center mb-8">
+        <a href="/" class="text-2xl font-bold text-gray-900">OpenLoop</a>
+        <p class="text-gray-600 mt-2" id="login-subtitle">Sign in to your admin dashboard</p>
+      </div>
+
+      <!-- Redirect message -->
+      <div id="redirect-message" class="mb-6 p-4 bg-blue-50 text-blue-700 rounded-lg text-sm hidden"></div>
+
+      <div class="bg-white rounded-lg border p-8">
+        <!-- Tabs -->
+        <div class="flex border-b mb-6">
+          <button id="tab-signin" class="flex-1 py-2 text-center border-b-2 border-indigo-600 text-indigo-600 font-medium">
+            Sign In
+          </button>
+          <button id="tab-signup" class="flex-1 py-2 text-center border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+            Sign Up
+          </button>
+        </div>
+
+        <!-- Sign In Form -->
+        <form id="signin-form" class="space-y-6">
+          <div>
+            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
+              Email
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              required
+              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="you@example.com"
+            />
+          </div>
+
+          <div>
+            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">
+              Password
+            </label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              required
+              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="••••••••"
+            />
+          </div>
+
+          <div class="flex items-center">
+            <input
+              type="checkbox"
+              id="remember-me"
+              name="rememberMe"
+              class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+            />
+            <label for="remember-me" class="ml-2 block text-sm text-gray-700">
+              Remember me
+            </label>
+          </div>
+
+          <div id="signin-error" class="text-red-600 text-sm hidden"></div>
+
+          <button
+            type="submit"
+            id="signin-btn"
+            class="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+          >
+            Sign In
+          </button>
+        </form>
+
+        <!-- Sign Up Form (hidden by default) -->
+        <form id="signup-form" class="space-y-6 hidden">
+          <div>
+            <label for="signup-email" class="block text-sm font-medium text-gray-700 mb-1">
+              Email
+            </label>
+            <input
+              type="email"
+              id="signup-email"
+              name="email"
+              required
+              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="you@example.com"
+            />
+          </div>
+
+          <div>
+            <label for="signup-password" class="block text-sm font-medium text-gray-700 mb-1">
+              Password
+            </label>
+            <input
+              type="password"
+              id="signup-password"
+              name="password"
+              required
+              minLength="6"
+              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="Min 6 characters"
+            />
+          </div>
+
+          <div>
+            <label for="org-name" class="block text-sm font-medium text-gray-700 mb-1">
+              Organization Name
+            </label>
+            <input
+              type="text"
+              id="org-name"
+              name="orgName"
+              required
+              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="Acme Inc."
+            />
+          </div>
+
+          <div>
+            <label for="org-slug" class="block text-sm font-medium text-gray-700 mb-1">
+              Organization Slug
+            </label>
+            <input
+              type="text"
+              id="org-slug"
+              name="orgSlug"
+              required
+              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="acme"
+            />
+          </div>
+
+          <div id="signup-error" class="text-red-600 text-sm hidden"></div>
+          <div id="signup-success" class="text-green-600 text-sm hidden"></div>
+
+          <button
+            type="submit"
+            id="signup-btn"
+            class="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+          >
+            Sign Up
+          </button>
+        </form>
+
+        <div class="mt-6 text-center">
+          <a href="/" class="text-sm text-gray-600 hover:text-gray-900">
+            ← Back to home
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { createClient } from '@supabase/supabase-js';
+
+    const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+    // Tab switching
+    const tabSignin = document.getElementById('tab-signin');
+    const tabSignup = document.getElementById('tab-signup');
+    const signinForm = document.getElementById('signin-form');
+    const signupForm = document.getElementById('signup-form');
+
+    tabSignin?.addEventListener('click', () => {
+      tabSignin.classList.add('border-indigo-600', 'text-indigo-600');
+      tabSignin.classList.remove('border-transparent', 'text-gray-500');
+      tabSignup.classList.remove('border-indigo-600', 'text-indigo-600');
+      tabSignup.classList.add('border-transparent', 'text-gray-500');
+      signinForm?.classList.remove('hidden');
+      signupForm?.classList.add('hidden');
+    });
+
+    tabSignup?.addEventListener('click', () => {
+      tabSignup.classList.add('border-indigo-600', 'text-indigo-600');
+      tabSignup.classList.remove('border-transparent', 'text-gray-500');
+      tabSignin.classList.remove('border-indigo-600', 'text-indigo-600');
+      tabSignin.classList.add('border-transparent', 'text-gray-500');
+      signupForm?.classList.remove('hidden');
+      signinForm?.classList.add('hidden');
+    });
+
+    // Auto-generate slug from org name
+    const orgNameInput = document.getElementById('org-name') as HTMLInputElement;
+    const orgSlugInput = document.getElementById('org-slug') as HTMLInputElement;
+    orgNameInput?.addEventListener('input', () => {
+      if (orgSlugInput && !orgSlugInput.dataset.userModified) {
+        orgSlugInput.value = orgNameInput.value.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+      }
+    });
+    orgSlugInput?.addEventListener('input', () => {
+      orgSlugInput.dataset.userModified = 'true';
+    });
+
+    // Sign In
+    const signinError = document.getElementById('signin-error');
+    const signinBtn = document.getElementById('signin-btn') as HTMLButtonElement;
+
+    signinForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = (document.getElementById('email') as HTMLInputElement).value;
+      const password = (document.getElementById('password') as HTMLInputElement).value;
+      const rememberMe = (document.getElementById('remember-me') as HTMLInputElement).checked;
+
+      signinBtn.disabled = true;
+      signinBtn.textContent = 'Signing in...';
+
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+
+        if (data.session) {
+          localStorage.setItem('sb_session', JSON.stringify({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+            user_id: data.session.user.id,
+            expires_at: data.session.expires_at
+          }));
+
+          // Handle remember me
+          if (rememberMe) {
+            localStorage.setItem('remember_email', email);
+          } else {
+            localStorage.removeItem('remember_email');
+          }
+
+          window.location.href = '/admin';
+        }
+      } catch (err: any) {
+        if (signinError) {
+          signinError.textContent = err.message || 'Invalid email or password';
+          signinError.classList.remove('hidden');
+        }
+        signinBtn.disabled = false;
+        signinBtn.textContent = 'Sign In';
+      }
+    });
+
+    // Sign Up
+    const signupError = document.getElementById('signup-error');
+    const signupSuccess = document.getElementById('signup-success');
+    const signupBtn = document.getElementById('signup-btn') as HTMLButtonElement;
+
+    signupForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = (document.getElementById('signup-email') as HTMLInputElement).value;
+      const password = (document.getElementById('signup-password') as HTMLInputElement).value;
+      const orgName = (document.getElementById('org-name') as HTMLInputElement).value;
+      const orgSlug = (document.getElementById('org-slug') as HTMLInputElement).value;
+
+      signupBtn.disabled = true;
+      signupBtn.textContent = 'Creating account...';
+
+      try {
+        // Sign up user
+        const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
+        if (authError) throw authError;
+
+        if (!authData.user) {
+          throw new Error('Failed to create user');
+        }
+
+        // Create organization
+        const { data: org, error: orgError } = await supabase
+          .from('organizations')
+          .insert({ name: orgName, slug: orgSlug })
+          .select()
+          .single();
+        if (orgError) throw orgError;
+
+        // Add user to organization (new multi-tenant approach)
+        const { error: userOrgError } = await supabase
+          .from('user_organizations')
+          .insert({
+            user_id: authData.user.id,
+            organization_id: org.id,
+            role: 'admin'
+          });
+        if (userOrgError) console.error('User org link error:', userOrgError);
+
+        // Also add to legacy users table for backward compatibility
+        const { error: userError } = await supabase
+          .from('users')
+          .insert({
+            id: authData.user.id,
+            organization_id: org.id,
+            email,
+            role: 'admin'
+          });
+        if (userError) console.error('User link error:', userError);
+
+        // Create default widget settings
+        await supabase.from('widget_settings').insert({
+          organization_id: org.id,
+          accent_color: '#6366f1',
+          position: 'bottom_right',
+          enabled: true
+        });
+
+        if (signupSuccess) {
+          signupSuccess.textContent = 'Account created! Signing you in...';
+          signupSuccess.classList.remove('hidden');
+        }
+
+        // Auto sign in
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+
+        if (data.session) {
+          localStorage.setItem('sb_session', JSON.stringify({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+            user_id: data.session.user.id,
+            expires_at: data.session.expires_at
+          }));
+          window.location.href = '/admin';
+        }
+      } catch (err: any) {
+        if (signupError) {
+          signupError.textContent = err.message || 'Failed to create account';
+          signupError.classList.remove('hidden');
+        }
+        signupBtn.disabled = false;
+        signupBtn.textContent = 'Sign Up';
+      }
+    });
+  </script>
+</Layout>

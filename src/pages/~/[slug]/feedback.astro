@@ -1,0 +1,54 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import FeedbackForm from '../../../components/FeedbackForm';
+import OrgNav from '../../../components/OrgNav';
+import OrgFooter from '../../../components/OrgFooter';
+import { supabase } from '../../../lib/supabase';
+
+export const prerender = false;
+
+const { slug } = Astro.params;
+
+if (!slug) {
+  return Astro.redirect('/404');
+}
+
+// Get org
+const { data: organization } = await supabase
+  .from('organizations')
+  .select('id, name, slug')
+  .eq('slug', slug)
+  .single();
+
+if (!organization) {
+  return Astro.redirect('/404');
+}
+
+// Get widget settings
+const { data: widgetSettings } = await supabase
+  .from('widget_settings')
+  .select('accent_color, position')
+  .eq('organization_id', organization.id)
+  .single();
+
+const accentColor = widgetSettings?.accent_color || '#6366f1';
+---
+
+<Layout title={`Feedback | ${organization.name}`}>
+  <OrgNav client:load org={organization.slug} orgName={organization.name} currentPage="feedback" />
+  <div class="min-h-screen bg-gray-50 py-12">
+    <div class="max-w-2xl mx-auto px-6">
+      <div class="text-center mb-8">
+        <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">Feedback</h1>
+        <p class="text-gray-600">Share your ideas and help us improve</p>
+      </div>
+
+      <FeedbackForm
+        client:load
+        org={organization.slug}
+        accentColor={accentColor}
+      />
+    </div>
+  </div>
+  <OrgFooter org={organization.slug} />
+</Layout>

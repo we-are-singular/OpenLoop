@@ -1,0 +1,36 @@
+---
+import '../styles/global.css';
+import ToastContainer from '../components/Toast';
+
+interface Props {
+  title: string;
+  rssUrl?: string;
+}
+
+const { title, rssUrl } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="OpenLoop - Feedback hub for your product" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    {rssUrl && <link rel="alternate" type="application/rss+xml" title="RSS Feed" href={rssUrl} />}
+    <title>{title}</title>
+  </head>
+  <body class="bg-gray-50 min-h-screen">
+    <slot />
+
+    <!-- Toast notifications -->
+    <ToastContainer client:load />
+
+    <!-- Global toast function -->
+    <script is:inline>
+      window.showToast = function(message, type = 'success') {
+        window.dispatchEvent(new CustomEvent('show-toast', { detail: { message, type, id: Math.random().toString(36).substring(7) } }));
+      };
+    </script>
+  </body>
+</html>

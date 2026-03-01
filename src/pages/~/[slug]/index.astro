@@ -1,0 +1,24 @@
+---
+import { supabase } from '../../../lib/supabase';
+
+export const prerender = false;
+
+const { slug } = Astro.params;
+
+if (!slug) {
+  return Astro.redirect('/404');
+}
+
+// Check if org exists
+const { data: organization } = await supabase
+  .from('organizations')
+  .select('slug')
+  .eq('slug', slug)
+  .single();
+
+if (!organization) {
+  return Astro.redirect('/404');
+}
+
+// Redirect to announcements page
+return Astro.redirect(`/~/${slug}/announcements`);

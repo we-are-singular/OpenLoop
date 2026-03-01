@@ -1,0 +1,439 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+
+const origin = Astro.url.origin
+---
+
+<AdminLayout title="Settings | OpenLoop">
+  <div id="app">
+    <div class="flex items-center justify-center h-64">
+      <div class="text-gray-500">Loading...</div>
+    </div>
+  </div>
+
+  <script>
+    import { createClient } from '@supabase/supabase-js';
+
+    const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+    // Simple session check
+    function getSupabase() {
+      const stored = localStorage.getItem('sb_session');
+      if (!stored) {
+        window.location.href = '/admin/login?message=session_expired';
+        return null;
+      }
+      try {
+        const session = JSON.parse(stored);
+        if (!session.access_token) {
+          window.location.href = '/admin/login?message=session_expired';
+          return null;
+        }
+        return createClient(supabaseUrl, supabaseAnonKey, {
+          global: {
+            headers: { Authorization: `Bearer ${session.access_token}` }
+          }
+        });
+      } catch {
+        window.location.href = '/admin/login?message=session_expired';
+        return null;
+      }
+    }
+
+    // Handle API errors
+    function handleApiError(error) {
+      if (error?.status === 401 || error?.message?.includes('JWT')) {
+        window.location.href = '/admin/login?message=session_expired';
+        return;
+      }
+    }
+
+    async function renderSettings(org) {
+      const supabase = getSupabase();
+      if (!supabase) return;
+
+      const app = document.getElementById('app');
+      if (!app) return;
+
+      // Fetch widget settings
+      const { data: widgetSettings } = await supabase
+        .from('widget_settings')
+        .select('*')
+        .eq('organization_id', org.id)
+        .single();
+
+      const settings = widgetSettings || {
+        accent_color: '#6366f1',
+        position: 'bottom_right',
+        enabled: true,
+        notification_email: '',
+        notify_on_new_feedback: true,
+        notify_on_new_votes: false,
+        notify_on_status_change: false,
+        notify_categories: ['feature', 'improvement', 'bug', 'other']
+      };
+
+      const categoryLabels = {
+        feature: 'Feature Requests',
+        improvement: 'Improvements',
+        bug: 'Bug Reports',
+        other: 'Other'
+      };
+
+      app.innerHTML = `
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 mb-6">Settings</h1>
+
+          <div class="bg-white rounded-lg border p-6 mb-6">
+            <h2 class="text-lg font-semibold mb-4">Organization</h2>
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+              <input type="text" id="org-name" value="${org.name}" class="w-full px-3 py-2 border rounded-lg" />
+            </div>
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Slug</label>
+              <input type="text" id="org-slug" value="${org.slug}" class="w-full px-3 py-2 border rounded-lg" />
+            </div>
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Base URL (for widget security)</label>
+              <input type="text" id="org-base-url" value="${org.base_url || ''}" class="w-full px-3 py-2 border rounded-lg" placeholder="https://yourapp.com" />
+              <p class="text-xs text-gray-500 mt-1">Only this domain can embed the widget. Leave empty to allow all origins.</p>
+            </div>
+            <button id="save-org" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+              Save Organization
+            </button>
+          </div>
+
+          <div class="bg-white rounded-lg border p-6 mb-6">
+            <h2 class="text-lg font-semibold mb-4">Widget Settings</h2>
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Accent Color</label>
+              <input type="color" id="accent-color" value="${settings.accent_color}" class="h-10 w-20" />
+            </div>
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Position</label>
+              <select id="position" class="w-full px-3 py-2 border rounded-lg">
+                <option value="bottom_right" ${settings.position === 'bottom_right' ? 'selected' : ''}>Bottom Right</option>
+                <option value="bottom_left" ${settings.position === 'bottom_left' ? 'selected' : ''}>Bottom Left</option>
+              </select>
+            </div>
+            <div class="mb-4">
+              <label class="flex items-center gap-2">
+                <input type="checkbox" id="enabled" ${settings.enabled ? 'checked' : ''} class="rounded" />
+                <span class="text-sm font-medium text-gray-700">Enable Widget</span>
+              </label>
+            </div>
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Notification Email</label>
+              <input type="email" id="notification-email" value="${settings.notification_email || ''}" class="w-full px-3 py-2 border rounded-lg" placeholder="admin@example.com" />
+              <p class="text-xs text-gray-500 mt-1">Receive email notifications when new feedback is submitted. Leave empty to disable.</p>
+            </div>
+
+            <div class="mb-4 pt-4 border-t">
+              <h3 class="text-sm font-medium text-gray-900 mb-3">Notification Preferences</h3>
+
+              <div class="space-y-3">
+                <label class="flex items-center gap-2">
+                  <input type="checkbox" id="notify-on-new-feedback" ${settings.notify_on_new_feedback !== false ? 'checked' : ''} class="rounded" />
+                  <span class="text-sm text-gray-700">Notify on new feedback</span>
+                </label>
+
+                <label class="flex items-center gap-2">
+                  <input type="checkbox" id="notify-on-new-votes" ${settings.notify_on_new_votes ? 'checked' : ''} class="rounded" />
+                  <span class="text-sm text-gray-700">Notify on new votes</span>
+                </label>
+
+                <label class="flex items-center gap-2">
+                  <input type="checkbox" id="notify-on-status-change" ${settings.notify_on_status_change ? 'checked' : ''} class="rounded" />
+                  <span class="text-sm text-gray-700">Notify on status changes</span>
+                </label>
+              </div>
+            </div>
+
+            <button id="save-widget" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+              Save Widget Settings
+            </button>
+          </div>
+
+          <!-- Embed Code Section -->
+          <div class="bg-gray-900 rounded-lg p-6">
+            <h2 class="text-lg font-semibold text-white mb-2">Embed Code</h2>
+            <p class="text-gray-400 text-sm mb-4">Add this to your website to show the feedback widget:</p>
+            <div class="relative">
+              <pre class="bg-gray-800 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto"><code id="embed-code">&lt;script&gt;
+  window.OpenLoop = {
+    org: '${org.slug}',
+    userId: 'USER_ID_FROM_YOUR_APP',
+    accentColor: '${settings.accent_color}'
+  };
+&lt;/script&gt;
+&lt;script src="${origin}/embed.js"&gt;&lt;/script&gt;</code></pre>
+              <button id="copy-embed" class="absolute top-2 right-2 px-3 py-1 bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700">
+                Copy
+              </button>
+            </div>
+            <p class="text-gray-500 text-xs mt-3">
+              Replace <code class="bg-gray-800 px-1 rounded">USER_ID_FROM_YOUR_APP</code> with your actual user ID.
+              Leave empty for anonymous feedback (no voting).
+            </p>
+          </div>
+        </div>
+      `;
+
+      // Event handlers
+      app.querySelector('#save-org')?.addEventListener('click', async () => {
+        const supabase = getSupabase();
+        if (!supabase) return;
+
+        const name = document.getElementById('org-name').value;
+        const slug = document.getElementById('org-slug').value;
+        const base_url = document.getElementById('org-base-url').value;
+
+        const { error } = await supabase.from('organizations').update({ name, slug, base_url }).eq('id', org.id);
+
+        if (!error) {
+          window.showToast?.('Organization saved', 'success');
+        } else {
+          window.showToast?.(error.message, 'error');
+        }
+      });
+
+      app.querySelector('#save-widget')?.addEventListener('click', async () => {
+        const supabase = getSupabase();
+        if (!supabase) return;
+
+        const accent_color = document.getElementById('accent-color').value;
+        const position = document.getElementById('position').value;
+        const enabled = document.getElementById('enabled').checked;
+        const notification_email = document.getElementById('notification-email').value;
+        const notify_on_new_feedback = document.getElementById('notify-on-new-feedback').checked;
+        const notify_on_new_votes = document.getElementById('notify-on-new-votes').checked;
+        const notify_on_status_change = document.getElementById('notify-on-status-change').checked;
+
+        // All categories are always notified (no fine-grained control needed)
+        const notify_categories = ['feature', 'improvement', 'bug', 'other'];
+
+        const widgetData = {
+          accent_color,
+          position,
+          enabled,
+          notification_email,
+          notify_on_new_feedback,
+          notify_on_new_votes,
+          notify_on_status_change,
+          notify_categories
+        };
+
+        if (widgetSettings) {
+          const { error } = await supabase.from('widget_settings').update(widgetData).eq('organization_id', org.id);
+          if (!error) {
+            window.showToast?.('Widget settings saved', 'success');
+          } else {
+            window.showToast?.(error.message, 'error');
+          }
+        } else {
+          const { error } = await supabase.from('widget_settings').insert({ organization_id: org.id, ...widgetData });
+          if (!error) {
+            window.showToast?.('Widget settings saved', 'success');
+          } else {
+            window.showToast?.(error.message, 'error');
+          }
+        }
+      });
+
+      app.querySelector('#copy-embed')?.addEventListener('click', () => {
+        const code = document.getElementById('embed-code').textContent;
+        navigator.clipboard.writeText(code);
+        window.showToast?.('Embed code copied to clipboard', 'success');
+      });
+
+      // Add "Create New Organization" section at the bottom
+      const createOrgSection = document.createElement('div');
+      createOrgSection.className = 'mt-8 pt-8 border-t';
+      createOrgSection.innerHTML = `
+        <div class="bg-white rounded-lg border p-6">
+          <h2 class="text-lg font-semibold mb-4">Create New Organization</h2>
+          <p class="text-gray-600 text-sm mb-4">Create a new organization to manage separate feedback boards.</p>
+          <button id="create-org-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+            Create New Organization
+          </button>
+        </div>
+      `;
+      app.appendChild(createOrgSection);
+
+      app.querySelector('#create-org-btn')?.addEventListener('click', () => {
+        const name = prompt('Enter organization name:');
+        if (!name) return;
+
+        let slug = prompt('Enter slug (e.g., mycompany):', name.toLowerCase().replace(/[^a-z0-9]/g, '-'));
+        if (!slug) return;
+
+        slug = slug.toLowerCase().replace(/[^a-z0-9]/g, '-');
+
+        // Check slug availability
+        supabase.from('organizations').select('id').eq('slug', slug).limit(1).then(({ data }) => {
+          if (data && data.length > 0) {
+            window.showToast?.('This slug is already taken', 'error');
+            return;
+          }
+
+          // Create the organization
+          supabase.from('organizations').insert({ name, slug }).select().single().then(async ({ data: newOrg, error }) => {
+            if (error) {
+              window.showToast?.(error.message, 'error');
+              return;
+            }
+
+            if (newOrg) {
+              // Get current user
+              const { data: { user } } = await supabase.auth.getUser();
+
+              if (user) {
+                // Add user to the new organization
+                await supabase.from('user_organizations').insert({
+                  user_id: user.id,
+                  organization_id: newOrg.id,
+                  role: 'admin'
+                }).catch(() => {
+                  // Might fail if table doesn't exist yet - that's OK
+                });
+              }
+
+              // Create default widget settings
+              await supabase.from('widget_settings').insert({
+                organization_id: newOrg.id,
+                accent_color: '#6366f1',
+                position: 'bottom_right',
+                enabled: true
+              });
+
+              // Select the new organization
+              localStorage.setItem('selected_org_id', newOrg.id);
+
+              window.showToast?.('Organization created', 'success');
+
+              // Reload to reflect changes
+              setTimeout(() => window.location.reload(), 500);
+            }
+          });
+        });
+      });
+    }
+
+    async function loadSettings() {
+      const supabase = getSupabase();
+      if (!supabase) return;
+
+      const app = document.getElementById('app');
+      if (!app) return;
+
+      // Check for selected organization from localStorage
+      const selectedOrgId = localStorage.getItem('selected_org_id');
+
+      if (selectedOrgId) {
+        // Fetch the selected organization
+        const { data: org } = await supabase
+          .from('organizations')
+          .select('id, name, slug, base_url')
+          .eq('id', selectedOrgId)
+          .single();
+
+        if (org) {
+          renderSettings(org);
+          return;
+        }
+      }
+
+      // Fallback: Check if user has any organizations via user_organizations
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: userOrgs } = await supabase
+          .from('user_organizations')
+          .select('organization_id, organizations(id, name, slug, base_url)')
+          .eq('user_id', user.id)
+          .limit(1);
+
+        if (userOrgs && userOrgs.length > 0) {
+          const org = userOrgs[0].organizations;
+          localStorage.setItem('selected_org_id', org.id);
+          renderSettings(org);
+          return;
+        }
+      }
+
+      // Legacy: Check if user has any organization (backward compatibility)
+      const { data: orgs } = await supabase.from('organizations').select('id, name, slug, base_url').limit(1);
+
+      if (!orgs || orgs.length === 0) {
+        // Show setup form
+        app.innerHTML = `
+          <div class="max-w-md mx-auto">
+            <h1 class="text-2xl font-bold text-gray-900 mb-2">Set Up Your Organization</h1>
+            <p class="text-gray-600 mb-6">Create your organization to get started with OpenLoop.</p>
+
+            <form id="setup-form" class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Organization Name</label>
+                <input type="text" id="org-name" class="w-full px-3 py-2 border rounded-lg" placeholder="Acme Inc." required />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Slug</label>
+                <input type="text" id="org-slug" class="w-full px-3 py-2 border rounded-lg" placeholder="acme" required />
+                <p class="text-gray-500 text-sm mt-1">This will be used in your public URL: /acme</p>
+              </div>
+              <button type="submit" class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                Create Organization
+              </button>
+            </form>
+          </div>
+        `;
+
+        const form = document.getElementById('setup-form');
+        const slugInput = document.getElementById('org-slug');
+
+        slugInput?.addEventListener('input', (e) => {
+          e.target.value = e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        });
+
+        form?.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const supabase = getSupabase();
+          if (!supabase) return;
+
+          const name = document.getElementById('org-name').value;
+          const slug = document.getElementById('org-slug').value;
+
+          const { data: userData } = await supabase.auth.getUser();
+          const userId = userData?.user?.id;
+
+          if (!userId) {
+            window.showToast?.('You must be signed in', 'error');
+            return;
+          }
+
+          const { data: org, error } = await supabase.from('organizations').insert({ name, slug }).select().single();
+
+          if (!error && org) {
+            // Create default widget settings
+            await supabase.from('widget_settings').insert({
+              organization_id: org.id,
+              accent_color: '#6366f1',
+              position: 'bottom_right',
+              enabled: true
+            });
+
+            window.location.reload();
+          } else {
+            window.showToast?.(error?.message || 'Failed to create organization', 'error');
+          }
+        });
+      } else {
+        renderSettings(orgs[0]);
+      }
+    }
+
+    // Load settings on page load
+    loadSettings();
+  </script>
+</AdminLayout>
