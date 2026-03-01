@@ -405,40 +405,32 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
       const app = document.getElementById('app');
       if (!app) return;
 
-      // Get selected organization from localStorage
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        window.location.href = '/admin/login?message=signin_required';
+        return;
+      }
+
+      // Load only organizations this user belongs to
+      const { data: userOrgs } = await supabase
+        .from('user_organizations')
+        .select('organization_id, organizations(id, slug)')
+        .eq('user_id', user.id);
+
+      const allowedOrgs = (userOrgs || []).map(uo => uo.organizations).filter(Boolean);
+
+      // Pick the selected org only if user actually belongs to it
       let org = null;
       const selectedOrgId = localStorage.getItem('selected_org_id');
-
       if (selectedOrgId) {
-        const { data } = await supabase
-          .from('organizations')
-          .select('id, slug')
-          .eq('id', selectedOrgId)
-          .single();
-        org = data;
+        org = allowedOrgs.find(o => o.id === selectedOrgId) || null;
       }
 
-      // Fallback: get first organization via user_organizations or legacy
-      if (!org) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: userOrgs } = await supabase
-            .from('user_organizations')
-            .select('organization_id, organizations(id, slug)')
-            .eq('user_id', user.id)
-            .limit(1);
-
-          if (userOrgs && userOrgs.length > 0) {
-            org = userOrgs[0].organizations;
-            localStorage.setItem('selected_org_id', org.id);
-          }
-        }
-      }
-
-      // Legacy fallback
-      if (!org) {
-        const { data: orgs } = await supabase.from('organizations').select('id, slug').limit(1);
-        org = orgs?.[0];
+      // Default to user's first org
+      if (!org && allowedOrgs.length > 0) {
+        org = allowedOrgs[0];
+        localStorage.setItem('selected_org_id', org.id);
       }
 
       if (!org) {

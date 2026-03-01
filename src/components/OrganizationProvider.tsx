@@ -189,13 +189,13 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
 
       if (orgError) throw orgError;
 
-      // Add the user to the organization with owner role
+      // Add the user to the organization with admin role
       await supabase
         .from('user_organizations')
         .insert({
           user_id: user.id,
           organization_id: org.id,
-          role: 'owner'
+          role: 'admin'
         });
 
       // Create default widget settings
