@@ -207,6 +207,7 @@ import Layout from '../../layouts/Layout.astro';
 
     const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+    const siteUrl = import.meta.env.PUBLIC_SITE_URL || window.location.origin;
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
     // Tab switching
@@ -306,7 +307,11 @@ import Layout from '../../layouts/Layout.astro';
 
       try {
         // Sign up user
-        const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { emailRedirectTo: `${siteUrl}/admin/login` }
+        });
         if (authError) throw authError;
 
         if (!authData.user) {
