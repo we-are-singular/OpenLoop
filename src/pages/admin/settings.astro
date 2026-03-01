@@ -328,44 +328,41 @@ const origin = Astro.url.origin
       const app = document.getElementById('app');
       if (!app) return;
 
-      // Check for selected organization from localStorage
-      const selectedOrgId = localStorage.getItem('selected_org_id');
-
-      if (selectedOrgId) {
-        // Fetch the selected organization
-        const { data: org } = await supabase
-          .from('organizations')
-          .select('id, name, slug, base_url')
-          .eq('id', selectedOrgId)
-          .single();
-
-        if (org) {
-          renderSettings(org);
-          return;
-        }
-      }
-
-      // Fallback: Check if user has any organizations via user_organizations
+      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: userOrgs } = await supabase
-          .from('user_organizations')
-          .select('organization_id, organizations(id, name, slug, base_url)')
-          .eq('user_id', user.id)
-          .limit(1);
-
-        if (userOrgs && userOrgs.length > 0) {
-          const org = userOrgs[0].organizations;
-          localStorage.setItem('selected_org_id', org.id);
-          renderSettings(org);
-          return;
-        }
+      if (!user) {
+        window.location.href = '/admin/login?message=signin_required';
+        return;
       }
 
-      // Legacy: Check if user has any organization (backward compatibility)
-      const { data: orgs } = await supabase.from('organizations').select('id, name, slug, base_url').limit(1);
+      // Load only organizations this user belongs to
+      const { data: userOrgs } = await supabase
+        .from('user_organizations')
+        .select('organization_id, organizations(id, name, slug, base_url)')
+        .eq('user_id', user.id);
 
-      if (!orgs || orgs.length === 0) {
+      const allowedOrgs = (userOrgs || []).map(uo => uo.organizations).filter(Boolean);
+
+      // Pick the selected org only if user actually belongs to it
+      let selectedOrg = null;
+      const selectedOrgId = localStorage.getItem('selected_org_id');
+      if (selectedOrgId) {
+        selectedOrg = allowedOrgs.find(o => o.id === selectedOrgId) || null;
+      }
+
+      // Default to user's first org
+      if (!selectedOrg && allowedOrgs.length > 0) {
+        selectedOrg = allowedOrgs[0];
+        localStorage.setItem('selected_org_id', selectedOrg.id);
+      }
+
+      if (selectedOrg) {
+        renderSettings(selectedOrg);
+        return;
+      }
+
+      // No organizations found — show setup form
+      if (true) {
         // Show setup form
         app.innerHTML = `
           <div class="max-w-md mx-auto">
@@ -428,8 +425,6 @@ const origin = Astro.url.origin
             window.showToast?.(error?.message || 'Failed to create organization', 'error');
           }
         });
-      } else {
-        renderSettings(orgs[0]);
       }
     }
 
