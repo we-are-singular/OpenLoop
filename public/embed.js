@@ -34,7 +34,7 @@
     container.style.cssText = 'position:fixed;z-index:999999;' + (anchor === 'left' ? 'left:20px;bottom:20px;' : 'right:20px;bottom:20px;');
   } else {
     // No floating button - widget can still be opened via window.OpenLoop.open()
-    container.style.cssText = 'position:fixed;z-index:999999;left:20px;bottom:20px;';
+    container.style.cssText = 'position:fixed;z-index:999999;' + (anchor === 'left' ? 'left:20px;bottom:20px;' : 'right:20px;bottom:20px;');
   }
 
   // Create toggle button - only show if floating button is enabled

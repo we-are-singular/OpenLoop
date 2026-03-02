@@ -360,6 +360,9 @@ const accentColor = widgetSettings?.accent_color || '#6366f1';
     }
 
     // Apply config to window.OpenLoop
+    let pendingEmbed = null;
+    let applyTimer = null;
+
     function applyConfig() {
       window.OpenLoop = window.OpenLoop || {};
       window.OpenLoop.org = 'openloop';
@@ -367,43 +370,50 @@ const accentColor = widgetSettings?.accent_color || '#6366f1';
       window.OpenLoop.anchor = config.anchor;
       window.OpenLoop.showFloatingButton = config.showFloatingButton;
 
-      // Trigger embed.js to reinitialize if it already ran
-      // We'll do this by reloading the script
       const existingContainer = document.getElementById('openloop-container');
-      if (existingContainer) {
-        existingContainer.remove();
+      if (existingContainer) existingContainer.remove();
+
+      // Cancel any script that was appended but hasn't run yet
+      if (pendingEmbed && pendingEmbed.parentNode) {
+        pendingEmbed.parentNode.removeChild(pendingEmbed);
       }
 
-      // Always re-run embed.js - showFloatingButton only controls button visibility, not widget loading
       const script = document.createElement('script');
       script.src = '/embed.js';
       script.async = true;
+      script.onload = function() { pendingEmbed = null; };
+      pendingEmbed = script;
       document.body.appendChild(script);
+    }
+
+    function scheduleApply() {
+      clearTimeout(applyTimer);
+      applyTimer = setTimeout(applyConfig, 50);
     }
 
     // Event listeners
     posLeft.addEventListener('click', function() {
       config.anchor = 'left';
       updateUI();
-      applyConfig();
+      scheduleApply();
     });
 
     posRight.addEventListener('click', function() {
       config.anchor = 'right';
       updateUI();
-      applyConfig();
+      scheduleApply();
     });
 
     accentColorInput.addEventListener('input', function() {
       config.accentColor = this.value;
       updateUI();
-      applyConfig();
+      scheduleApply();
     });
 
     toggleFloating.addEventListener('change', function() {
       config.showFloatingButton = this.checked;
       updateUI();
-      applyConfig();
+      scheduleApply();
     });
 
     openWidget.addEventListener('click', function() {
