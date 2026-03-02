@@ -2,6 +2,7 @@ import { OrganizationProvider, useOrganization } from './OrganizationProvider';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import OrgSwitcher from './OrgSwitcher';
+import Logo from './Logo';
 
 interface AdminLayoutProps {
   children?: ReactNode;
@@ -121,7 +122,10 @@ function AdminLayoutContent({ children }: { children?: ReactNode }) {
       <div className="flex">
         <aside id="sidebar" className="fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 min-h-screen transform -translate-x-full lg:translate-x-0 transition-transform duration-200">
           <div className="p-6">
-            <a href="/admin" className="text-xl font-bold text-gray-900">OpenLoop</a>
+            <a href="/admin" className="flex items-center">
+              <Logo size="w-9 h-9" />
+              <span className="text-xl font-bold text-gray-900">OpenLoop</span>
+            </a>
           </div>
 
           <div className="px-4 mb-4">

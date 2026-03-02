@@ -1,0 +1,15 @@
+---
+interface Props {
+  size?: string;       // Tailwind size classes, e.g. 'w-10 h-10'
+  invert?: boolean;    // true = white logo for dark backgrounds
+  class?: string;      // extra classes
+}
+
+const { size = 'w-10 h-10', invert = false, class: className = '' } = Astro.props;
+---
+
+<img
+  src="/logo.svg"
+  alt="OpenLoop"
+  class={`${size} ${invert ? 'brightness-0 invert' : ''} ${className}`.trim()}
+/>
