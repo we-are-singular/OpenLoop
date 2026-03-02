@@ -339,6 +339,12 @@ export default function Widget({ org: propOrg, accentColor: propAccentColor, pos
     ? 'left-4 bottom-4'
     : 'right-4 bottom-4';
 
+  const tabPaths: Record<'submit' | 'vote' | 'news', string> = {
+    submit: 'feedback',
+    vote: 'roadmap',
+    news: 'announcements',
+  };
+
   // Page mode shows tabs, floating mode shows button
   if (config.pageMode) {
     return (
@@ -517,7 +523,7 @@ export default function Widget({ org: propOrg, accentColor: propAccentColor, pos
                       )}
                     </div>
                     {announcement.content && (
-                      <p className="text-xs text-gray-600 line-clamp-3 leading-relaxed">{announcement.content}</p>
+                      <p className="text-xs text-gray-600 leading-relaxed">{announcement.content}</p>
                     )}
                   </div>
                 ))
@@ -525,6 +531,19 @@ export default function Widget({ org: propOrg, accentColor: propAccentColor, pos
             </div>
           )}
         </div>
+
+        {orgName && activeTab !== 'submit' && (
+          <div className="flex-shrink-0 border-t border-gray-100 py-2 text-center">
+            <a
+              href={`/~/${orgSlug}/${tabPaths[activeTab]}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-gray-400 hover:text-gray-600"
+            >
+              Visit {orgName} on OpenLoop
+            </a>
+          </div>
+        )}
       </div>
     );
   }

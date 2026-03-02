@@ -15,11 +15,20 @@ export default defineConfig({
     enabled: false
   },
   vite: {
-    plugins: [tailwindcss()],
-    resolve: {
-      alias: {
-        'react-dom/server': 'react-dom/server.edge'
+    plugins: [
+      tailwindcss(),
+      {
+        name: 'react-dom-edge-build-only',
+        config(_, { command }) {
+          if (command === 'build') {
+            return {
+              resolve: {
+                alias: { 'react-dom/server': 'react-dom/server.edge' }
+              }
+            };
+          }
+        }
       }
-    }
+    ]
   }
 });

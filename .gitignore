@@ -19,6 +19,10 @@ docs/
 .env
 .env.production
 
+# Configs
+.claude
+.wrangler
+
 # macOS-specific files
 .DS_Store
 
