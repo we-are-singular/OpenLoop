@@ -28,28 +28,20 @@
   var container = document.createElement('div');
   container.id = 'openloop-container';
 
-  // If floating button is disabled, still show the widget inline (at bottom of page)
-  // Otherwise position as fixed floating widget
-  if (showFloatingButton) {
-    container.style.cssText = 'position:fixed;z-index:999999;' + (anchor === 'left' ? 'left:20px;bottom:20px;' : 'right:20px;bottom:20px;');
-  } else {
-    // No floating button - widget can still be opened via window.OpenLoop.open()
-    container.style.cssText = 'position:fixed;z-index:999999;' + (anchor === 'left' ? 'left:20px;bottom:20px;' : 'right:20px;bottom:20px;');
-  }
+  container.style.cssText = 'position:fixed;z-index:999999;' + (anchor === 'left' ? 'left:20px;bottom:20px;' : 'right:20px;bottom:20px;');
 
-  // Create toggle button - only show if floating button is enabled
-  var button = null;
-  if (showFloatingButton) {
-    button = document.createElement('button');
-    button.innerHTML = makeLogoIcon(accentColor);
-    button.style.lineHeight = '0';
-    button.setAttribute('type', 'button');
-    button.setAttribute('aria-label', 'Open feedback widget');
-    // Use inline style with !important to override host page styles
-    button.style.cssText = 'width:56px !important;height:56px !important;border-radius:50% !important;border:none !important;background:none !important;cursor:pointer !important;box-shadow:0 4px 12px rgba(0,0,0,0.15) !important;transition:transform 0.2s !important;display:flex !important;align-items:center !important;justify-content:center !important;padding:0 !important;';
-    button.onmouseover = function() { button.style.transform = 'scale(1.1)'; };
-    button.onmouseout = function() { button.style.transform = 'scale(1)'; };
-  }
+  // Always create the button; hide it initially when showFloatingButton is false
+  // (it will appear as a close button whenever the widget is open)
+  var button = document.createElement('button');
+  button.innerHTML = makeLogoIcon(accentColor);
+  button.style.lineHeight = '0';
+  button.setAttribute('type', 'button');
+  button.setAttribute('aria-label', 'Open feedback widget');
+  // Use inline style with !important to override host page styles
+  button.style.cssText = 'width:56px !important;height:56px !important;border-radius:50% !important;border:none !important;background:none !important;cursor:pointer !important;box-shadow:0 4px 12px rgba(0,0,0,0.15) !important;transition:transform 0.2s !important;display:flex !important;align-items:center !important;justify-content:center !important;padding:0 !important;';
+  if (!showFloatingButton) button.style.setProperty('display', 'none', 'important');
+  button.onmouseover = function() { button.style.transform = 'scale(1.1)'; };
+  button.onmouseout = function() { button.style.transform = 'scale(1)'; };
 
   // Create iframe
   var iframe = document.createElement('iframe');
@@ -67,21 +59,20 @@
   iframe.style.cssText = 'position:absolute;' + (anchor === 'left' ? 'left:0;' : 'right:0;') + 'bottom:70px;width:320px;height:500px;border:none;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.15);display:none;background:white;';
   iframe.title = 'OpenLoop Widget';
 
-  // Toggle functionality - only attach if button exists
   var isOpen = false;
-  if (button) {
-    button.onclick = function() {
-      isOpen = !isOpen;
-      iframe.style.display = isOpen ? 'block' : 'none';
-      if (isOpen) {
-        button.innerHTML = iconClose;
-        button.style.setProperty('background', accentColor, 'important');
-      } else {
-        button.innerHTML = makeLogoIcon(accentColor);
-        button.style.setProperty('background', 'none', 'important');
-      }
-    };
-  }
+  button.onclick = function() {
+    isOpen = !isOpen;
+    iframe.style.display = isOpen ? 'block' : 'none';
+    if (isOpen) {
+      button.innerHTML = iconClose;
+      button.style.setProperty('background', accentColor, 'important');
+      button.style.setProperty('display', 'flex', 'important');
+    } else {
+      button.innerHTML = makeLogoIcon(accentColor);
+      button.style.setProperty('background', 'none', 'important');
+      if (!showFloatingButton) button.style.setProperty('display', 'none', 'important');
+    }
+  };
 
   // Store pending data to send when iframe loads
   var pendingOpenData = null;
@@ -90,10 +81,9 @@
   window.OpenLoop.open = function(data) {
     isOpen = true;
     iframe.style.display = 'block';
-    if (button) {
-      button.innerHTML = iconClose;
-      button.style.setProperty('background', accentColor, 'important');
-    }
+    button.innerHTML = iconClose;
+    button.style.setProperty('background', accentColor, 'important');
+    button.style.setProperty('display', 'flex', 'important');
 
     // If data is provided, send it to the iframe
     if (data) {
@@ -111,10 +101,9 @@
   window.OpenLoop.close = function() {
     isOpen = false;
     iframe.style.display = 'none';
-    if (button) {
-      button.innerHTML = makeLogoIcon(accentColor);
-      button.style.setProperty('background', 'none', 'important');
-    }
+    button.innerHTML = makeLogoIcon(accentColor);
+    button.style.setProperty('background', 'none', 'important');
+    if (!showFloatingButton) button.style.setProperty('display', 'none', 'important');
   };
 
   window.OpenLoop.toggle = function(data) {
@@ -137,8 +126,6 @@
   };
 
   container.appendChild(iframe);
-  if (button) {
-    container.appendChild(button);
-  }
+  container.appendChild(button);
   document.body.appendChild(container);
 })();
