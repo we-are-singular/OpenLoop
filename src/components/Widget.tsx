@@ -65,6 +65,7 @@ export default function Widget({ org: propOrg, accentColor: propAccentColor, pos
   const [votedPosts, setVotedPosts] = useState<Set<string>>(new Set());
   const [orgId, setOrgId] = useState<string | null>(null);
   const [orgSlug, setOrgSlug] = useState('');
+  const [orgName, setOrgName] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
@@ -143,7 +144,7 @@ export default function Widget({ org: propOrg, accentColor: propAccentColor, pos
     // Get org by slug
     const { data: org } = await supabase
       .from('organizations')
-      .select('id')
+      .select('id, name')
       .eq('slug', orgSlug)
       .single();
 
@@ -153,6 +154,7 @@ export default function Widget({ org: propOrg, accentColor: propAccentColor, pos
     }
 
     setOrgId(org.id);
+    setOrgName(org.name || orgSlug);
 
     // Load posts
     const { data: postsData } = await supabase
