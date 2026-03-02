@@ -1,0 +1,85 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Logo from '../components/Logo.astro';
+---
+
+<Layout title="Privacy Policy - OpenLoop">
+  <div class="bg-white min-h-screen">
+    <header class="max-w-4xl mx-auto px-6 py-6">
+      <a href="/" class="flex items-center">
+        <Logo size="w-10 h-10" />
+        <span class="text-xl font-bold text-gray-900">OpenLoop</span>
+      </a>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-6 py-12">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">Privacy Policy</h1>
+      <p class="text-sm text-gray-500 mb-10">Last updated: March 2, 2026</p>
+
+      <div class="prose prose-gray max-w-none space-y-8 text-gray-700">
+        <section>
+          <h2 class="text-xl font-semibold text-gray-900 mb-3">What this project is</h2>
+          <p>
+            OpenLoop is an open-source, self-hosted feedback collection platform built for educational and experimental purposes. It is not a commercial service. If you self-host OpenLoop, <strong>you</strong> are the data controller for your instance.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-semibold text-gray-900 mb-3">What data is collected</h2>
+          <p>OpenLoop collects only what is necessary for the product to function:</p>
+          <ul class="list-disc list-inside space-y-1 mt-2">
+            <li><strong>Feedback submissions</strong> — the text content users submit through the widget</li>
+            <li><strong>Votes</strong> — which ideas a user has upvoted (tracked by user ID you provide)</li>
+            <li><strong>Email address</strong> — only if a user or admin provides one for notifications</li>
+            <li><strong>Admin credentials</strong> — email and password for dashboard access, managed by Supabase Auth</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-semibold text-gray-900 mb-3">What we do not do</h2>
+          <ul class="list-disc list-inside space-y-1">
+            <li>No analytics or tracking scripts</li>
+            <li>No cookies beyond functional session storage</li>
+            <li>No selling, sharing, or monetizing user data</li>
+            <li>No profiling or behavioral tracking</li>
+            <li>No third-party advertising</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-semibold text-gray-900 mb-3">Third-party services</h2>
+          <p>The hosted demo and default deployment rely on:</p>
+          <ul class="list-disc list-inside space-y-1 mt-2">
+            <li><strong>Supabase</strong> — database and authentication (<a href="https://supabase.com/privacy" class="text-indigo-600 hover:underline">their privacy policy</a>)</li>
+            <li><strong>Cloudflare</strong> — hosting and CDN (<a href="https://www.cloudflare.com/privacypolicy/" class="text-indigo-600 hover:underline">their privacy policy</a>)</li>
+            <li><strong>Resend</strong> — transactional email, only if notifications are enabled (<a href="https://resend.com/legal/privacy-policy" class="text-indigo-600 hover:underline">their privacy policy</a>)</li>
+          </ul>
+          <p class="mt-2">
+            If you self-host, you choose your own providers and their respective policies apply.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-semibold text-gray-900 mb-3">Data storage</h2>
+          <p>
+            All data is stored in your Supabase project with Row Level Security enabled. We do not maintain a separate copy of your data. Session tokens are stored in the browser's <code class="bg-gray-100 px-1 rounded">localStorage</code> and never sent to any third party.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-semibold text-gray-900 mb-3">Data deletion</h2>
+          <p>
+            Self-hosted users have full control over their database and can delete any data at any time. If you submitted feedback on a hosted instance and want it removed, contact the instance operator.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-semibold text-gray-900 mb-3">Changes</h2>
+          <p>
+            This policy may be updated as the project evolves. Changes will be committed to the repository.
+          </p>
+        </section>
+      </div>
+    </main>
+  </div>
+</Layout>

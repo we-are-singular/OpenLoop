@@ -1,0 +1,80 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Logo from '../components/Logo.astro';
+---
+
+<Layout title="Terms of Use - OpenLoop">
+  <div class="bg-white min-h-screen">
+    <header class="max-w-4xl mx-auto px-6 py-6">
+      <a href="/" class="flex items-center">
+        <Logo size="w-10 h-10" />
+        <span class="text-xl font-bold text-gray-900">OpenLoop</span>
+      </a>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-6 py-12">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">Terms of Use</h1>
+      <p class="text-sm text-gray-500 mb-10">Last updated: March 2, 2026</p>
+
+      <div class="prose prose-gray max-w-none space-y-8 text-gray-700">
+        <section>
+          <h2 class="text-xl font-semibold text-gray-900 mb-3">What this is</h2>
+          <p>
+            OpenLoop is open-source software released under the <a href="https://opensource.org/licenses/MIT" class="text-indigo-600 hover:underline">MIT License</a>. It is built for educational and experimental purposes — specifically to explore automated software development. It is not a commercial product.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-semibold text-gray-900 mb-3">Use at your own risk</h2>
+          <p>
+            This software is provided <strong>"as is"</strong>, without warranty of any kind, express or implied. This includes but is not limited to warranties of merchantability, fitness for a particular purpose, and non-infringement.
+          </p>
+          <p class="mt-2">
+            The authors and contributors are not liable for any claim, damages, or other liability arising from the use of this software. You use it at your own risk.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-semibold text-gray-900 mb-3">Self-hosting</h2>
+          <p>
+            If you self-host OpenLoop, you are responsible for:
+          </p>
+          <ul class="list-disc list-inside space-y-1 mt-2">
+            <li>Securing your deployment and database</li>
+            <li>Complying with applicable laws in your jurisdiction (GDPR, CCPA, etc.)</li>
+            <li>Managing your users' data and responding to their requests</li>
+            <li>Any costs associated with third-party services (Supabase, Cloudflare, Resend, etc.)</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-semibold text-gray-900 mb-3">No guarantees</h2>
+          <p>
+            This is an experimental project. We make no guarantees about uptime, reliability, security, or continued development. Features may change or be removed without notice.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-semibold text-gray-900 mb-3">User conduct</h2>
+          <p>
+            If you submit feedback on any OpenLoop instance, don't submit spam, malicious content, or anything illegal. Instance operators may remove content at their discretion.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-semibold text-gray-900 mb-3">License</h2>
+          <p>
+            The source code is licensed under the MIT License. You are free to use, modify, and distribute it under those terms. See the <a href="https://github.com/openloop/feedback-hub/blob/main/LICENSE" class="text-indigo-600 hover:underline">LICENSE</a> file for the full text.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="text-xl font-semibold text-gray-900 mb-3">Changes</h2>
+          <p>
+            These terms may be updated as the project evolves. Changes will be committed to the repository.
+          </p>
+        </section>
+      </div>
+    </main>
+  </div>
+</Layout>
