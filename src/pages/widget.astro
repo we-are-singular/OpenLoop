@@ -39,8 +39,20 @@ if (baseUrl && !referer.includes('localhost') && !referer.includes('127.0.0.1'))
 
 // Security headers
 Astro.response.headers.set('X-Content-Type-Options', 'nosniff');
-Astro.response.headers.set('X-Frame-Options', 'SAMEORIGIN');
 Astro.response.headers.set('X-XSS-Protection', '1; mode=block');
+// Allow framing only from the configured base_url (or any origin when unrestricted).
+// X-Frame-Options: SAMEORIGIN is intentionally NOT set here — that would block every
+// customer from embedding the widget on their own domain.
+if (baseUrl) {
+  try {
+    const allowedOrigin = new URL(baseUrl).origin;
+    Astro.response.headers.set('Content-Security-Policy', `frame-ancestors 'self' ${allowedOrigin}`);
+  } catch {
+    Astro.response.headers.set('Content-Security-Policy', `frame-ancestors 'self'`);
+  }
+} else {
+  Astro.response.headers.set('Content-Security-Policy', `frame-ancestors *`);
+}
 ---
 
 <html lang="en">
