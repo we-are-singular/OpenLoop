@@ -103,20 +103,6 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         console.error('Error fetching organizations:', error);
-        // Fallback: try direct organizations table (backward compatibility)
-        const { data: directOrgs } = await supabase
-          .from('organizations')
-          .select('id, name, slug, base_url')
-          .limit(1);
-
-        if (directOrgs && directOrgs.length > 0) {
-          setOrganizations(directOrgs);
-          cacheOrgs(directOrgs);
-          // Check localStorage for previously selected org
-          const savedOrgId = localStorage.getItem('selected_org_id');
-          const savedOrg = directOrgs.find(o => o.id === savedOrgId);
-          setSelectedOrg(savedOrg || directOrgs[0]);
-        }
         setLoading(false);
         setInitialLoadDone(true);
         return;

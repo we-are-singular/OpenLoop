@@ -15,3 +15,4 @@ SELECT id, '#6366f1', 'bottom_right', true
 FROM organizations
 WHERE slug = 'openloop'
 ON CONFLICT (organization_id) DO NOTHING;
+
